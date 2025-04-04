@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | URLDetect</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-card">
+            <h2>Login Here</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Enter Email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter Password" required>
+                </div>
+                <button type="submit">Log In</button>
+                <p class="login-link">Don't have an account? <a href="register.html">Sign Up</a></p>
+                <div id="error-message" class="error"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword 
+        } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            updateDoc 
+        } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        // Your Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDb6TAjfQ0N_u-0iYFDEKXOG_hO9ZlV3e0",
+            authDomain: "urldetect-406d9.firebaseapp.com",
+            projectId: "urldetect-406d9",
+            storageBucket: "urldetect-406d9.appspot.com",
+            messagingSenderId: "566003000750",
+            appId: "1:566003000750:web:fc8524237656bdeb82943f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Login Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-message');
+
+            // Clear previous errors
+            errorDiv.textContent = '';
+
+            try {
+                // Show loading state
+                e.submitter.textContent = 'Logging in...';
+                e.submitter.disabled = true;
+
+                // 1. Authenticate user
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                
+                // 2. Update last login time in Firestore
+                await updateDoc(doc(db, "users", userCredential.user.uid), {
+                    lastLogin: new Date()
+                });
+
+                // Redirect to dashboard
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                handleError(error);
+                // Reset button
+                e.submitter.textContent = 'Log In';
+                e.submitter.disabled = false;
+            }
+        });
+
+        function handleError(error) {
+            const errorDiv = document.getElementById('error-message');
+            switch(error.code) {
+                case 'auth/user-not-found':
+                    errorDiv.textContent = "Email not registered";
+                    break;
+                case 'auth/wrong-password':
+                    errorDiv.textContent = "Incorrect password";
+                    break;
+                case 'auth/invalid-email':
+                    errorDiv.textContent = "Invalid email format";
+                    break;
+                case 'auth/too-many-requests':
+                    errorDiv.textContent = "Too many attempts. Try again later.";
+                    break;
+                default:
+                    errorDiv.textContent = error.message || "Login failed. Please try again.";
+            }
+        }
+    </script>
+</body>
+</html>

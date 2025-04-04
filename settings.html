@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URLDetect - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <nav class="side-nav">
+            <div class="nav-header">
+                <h2><i class="fas fa-shield-alt"></i> URLDetect</h2>
+            </div>
+            <ul class="nav-links">
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="verification.html"><i class="fas fa-check-double"></i> URL Verification</a></li>
+                <li><a href="elearning.html"><i class="fas fa-graduation-cap"></i> E-Learning</a></li>
+                <li class="active"><a href="settings.html"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><button id="navLogout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Account Settings</h1>
+                <div class="profile-section">
+                    <div class="profile-info">
+                        <!-- <img src="https://via.placeholder.com/40" alt="Profile" class="profile-pic"> -->
+                        <div class="profile-details">
+                            <h3 id="currentUsername">Loading...</h3>
+                            <p class="profile-email" id="currentEmail"></p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="settings-container">
+                <div class="settings-card">
+                    <div class="card-header">
+                        <i class="fas fa-user-tie"></i>
+                        <h2>Account Details</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="info-label">Username:</span>
+                            <span class="info-value" id="displayUsername">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value" id="displayEmail">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="card-header">
+                        <i class="fas fa-user-edit"></i>
+                        <h2>Update Profile</h2>
+                    </div>
+                    <form id="profileForm" class="card-body">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="username" placeholder="Enter new username" required>
+                        </div>
+                        <button type="submit" class="primary-btn">Update Profile</button>
+                        <div id="profileMessage" class="message"></div>
+                    </form>
+                </div>
+
+                <div class="settings-card">
+                    <div class="card-header">
+                        <i class="fas fa-lock"></i>
+                        <h2>Change Password</h2>
+                    </div>
+                    <form id="passwordForm" class="card-body">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="newPassword" required>
+                        </div>
+                        <button type="submit" class="primary-btn">Change Password</button>
+                        <div id="passwordMessage" class="message"></div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getAuth, updatePassword, signOut, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDb6TAjfQ0N_u-0iYFDEKXOG_hO9ZlV3e0",
+            authDomain: "urldetect-406d9.firebaseapp.com",
+            projectId: "urldetect-406d9",
+            storageBucket: "urldetect-406d9.appspot.com",
+            messagingSenderId: "566003000750",
+            appId: "1:566003000750:web:fc8524237656bdeb82943f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                document.getElementById('currentEmail').textContent = user.email;
+                document.getElementById('displayEmail').textContent = user.email;
+                
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    document.getElementById('currentUsername').textContent = userDoc.data().username;
+                    document.getElementById('displayUsername').textContent = userDoc.data().username;
+                }
+            } else {
+                window.location.href = "login.html";
+            }
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newUsername = document.getElementById('username').value.trim();
+            const user = auth.currentUser;
+            
+            if (user) {
+                await updateDoc(doc(db, "users", user.uid), { username: newUsername });
+                document.getElementById('profileMessage').textContent = "Profile updated successfully!";
+            }
+        });
+
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            
+            if (user) {
+                const credential = EmailAuthProvider.credential(user.email, currentPassword);
+                await reauthenticateWithCredential(user, credential);
+                await updatePassword(user, newPassword);
+                document.getElementById('passwordMessage').textContent = "Password changed successfully!";
+            }
+        });
+
+        document.getElementById('navLogout').addEventListener('click', async () => {
+            await signOut(auth);
+            window.location.href = "login.html";
+        });
+    </script>
+</body>
+</html>
